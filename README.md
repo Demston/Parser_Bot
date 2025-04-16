@@ -6,8 +6,5 @@
 среднюю цену указанного товара на каждом сайте, который есть в таблице. Пользователю отправляется 
 список товаров (имя, ссылка и цена) с таблицы, а также информация о средней цене этих товаров на сайте.
 
-![Window](https://github.com/Demston/art-studio_web-project/blob/main/screen_1.png)
-![Window](https://github.com/Demston/art-studio_web-project/blob/main/screen_4.png)<br>
-![Window](https://github.com/Demston/art-studio_web-project/blob/main/screen_6.png)<br>
-![Window](https://github.com/Demston/art-studio_web-project/blob/main/screen_7.png)<br>
-![Window](https://github.com/Demston/art-studio_web-project/blob/main/screen_9.png)<br>
+![Window](https://github.com/Demston/Parser-Bot/blob/main/screen_1.png)
+![Window](https://github.com/Demston/Parser-Bot/blob/main/screen_2.png)
