@@ -16,17 +16,20 @@ bot = telebot.TeleBot(TOKEN)
 
 def get_price(url, xpath):
     """Вытягиваем цену со страницы по url-ссылке товара"""
-    response = requests.get(url)
-    response.raise_for_status()  # Проверяем запрос (код 200 - успех)
-    tree = html.fromstring(response.content)
-    price_element = tree.xpath(xpath)  # Ищем цену по пути xpath
-    price_v1 = price_element[0].text.strip()  # Возвращаем текст с ценой
-    price_v2 = ''
-    for i in price_v1:  # Отсеиваем лишние знаки в цене, оставляем цифры
-        if i.isdigit():
-            price_v2 += i
-    price_v3 = int(price_v2)
-    return price_v3  # Возвращаем цену со страницы
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Проверяем запрос (код 200 - успех)
+        tree = html.fromstring(response.content)
+        price_element = tree.xpath(xpath)  # Ищем цену по пути xpath
+        price_v1 = price_element[0].text.strip()  # Возвращаем текст с ценой
+        price_v2 = ''
+        for i in price_v1:  # Отсеиваем лишние знаки в цене, оставляем цифры
+            if i.isdigit():
+                price_v2 += i
+        price_v3 = int(price_v2)
+        return price_v3  # Возвращаем цену со страницы
+    except:
+        return '0'  # Если путь изменился или ссылка не существует - возвращаем 0
 
 
 @bot.message_handler(commands=['start'])
@@ -65,6 +68,9 @@ def handle_document(message):
             url_domain = urlparse(row["url"]).netloc  # Доменное имя главной страницы сайта
             db_cur.execute('SELECT url FROM books WHERE url = ?', (row["url"],))  # Выбираем url-ы ссылок на товары
             url_coind = db_cur.fetchone()
+            db_cur.execute('INSERT INTO tmp VALUES(?, ?, ?)',
+                           (row["title"], get_price(row["url"], row["xpath"]), url_domain,))
+            # Записываем во временную таблицу БД инфу о товарах: имя, ссылка, цена (для расчёта средней цены)
             if url_coind:
                 db_cur.execute('UPDATE books SET price = ? WHERE url = ?',
                                (get_price(row["url"], row["xpath"]), row["url"],))
@@ -73,17 +79,20 @@ def handle_document(message):
                 db_cur.execute('INSERT INTO books VALUES(?, ?, ?, ?)',
                                (row["title"], row["url"], get_price(row["url"], row["xpath"]), url_domain,))
                 # Записываем в БД инфу о товарах: имя, ссылка, цена
+            conn.commit()
             bot.send_message(chat_id, f'Книга {row["title"]}, магазин {row["url"]}, цена '
                                       f'{get_price(row["url"], row["xpath"])} р.')
             # Отправляем пользователю полученую инфу из таблицы: имя, ссылка, цена
-        db_cur.execute('SELECT url_dom, ROUND(AVG(price)) FROM books GROUP BY url_dom')
-        # Вытягиваем всю инфу с таблицы для вычисления средней цены
+        db_cur.execute('SELECT url_dom, ROUND(AVG(price)) FROM tmp GROUP BY url_dom')
+        # Вытягиваем всю инфу с временной таблицы БД для вычисления средней цены
         avg_price = db_cur.fetchall()
         for el in avg_price:
             bot.send_message(chat_id, 'Средняя цена зюзюблика на маркетплейсе, руб.: ')
             for i in el:
                 bot.send_message(chat_id, i)
         os.remove(saved_file.name)  # Удаляем сохраненный файл за ненадобностью
+        db_cur.execute('DELETE FROM tmp')    # Удаляем данные из временной таблицы БД
+        conn.commit()
     else:
         bot.reply_to(message, "Не Excel документ")
 
